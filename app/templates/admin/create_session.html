@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Multi-Slide Poll - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
+        .image-preview-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .image-preview-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        
+        .remove-image-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .remove-image-btn:hover {
+            background: rgba(220, 38, 38, 1);
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen text-gray-100">
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <img src="{{ url_for('static', filename='images/brtanya_logo.png') }}" alt="BRTanya Logo" class="h-10 w-auto">
+                    <div>
+                        <p class="text-sm text-gray-400">Build your engagement presentation</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Back to Dashboard -->
+                    <a href="{{ url_for('admin.poll') }}" class="flex items-center gap-2 px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition" title="Back to Dashboard">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        <span class="hidden sm:inline">Dashboard</span>
+                    </a>
+                  
+                    <!-- Create Session -->
+                    <button onclick="createSession()" class="flex items-center gap-2 px-4 py-2 bg-lime-500 text-gray-900 rounded-lg hover:bg-lime-400 transition font-semibold" title="Create Session">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span class="hidden sm:inline">Create Session</span>
+                    </button>
+
+                    <!-- Divider -->
+                    <div class="h-8 w-px bg-gray-700 hidden md:block"></div>
+
+                    <!-- User Menu -->
+                    <div class="relative" id="userMenuContainer">
+                        <button 
+                            onclick="toggleUserMenu()"
+                            class="flex items-center gap-2 px-3 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition"
+                        >
+                            <div class="w-8 h-8 bg-gradient-to-br from-cyan-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                {{ current_user.username[0].upper() if current_user.is_authenticated else 'U' }}
+                            </div>
+                            <span class="hidden md:block font-medium">{{ current_user.username if current_user.is_authenticated else 'User' }}</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Dropdown Menu -->
+                        <div 
+                            id="userMenu" 
+                            class="hidden absolute right-0 mt-2 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl overflow-hidden z-50"
+                        >
+                            <div class="p-3 border-b border-gray-700">
+                                <p class="text-sm text-gray-400">Signed in as</p>
+                                <p class="font-semibold text-gray-200">{{ current_user.username if current_user.is_authenticated else 'Guest' }}</p>
+                                {% if current_user.is_authenticated and current_user.email %}
+                                <p class="text-xs text-gray-500 mt-0.5">{{ current_user.email }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="py-1">
+                                <a href="{{ url_for('admin.poll') }}" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                                    </svg>
+                                    Dashboard
+                                </a>
+
+                                {% if current_user.is_authenticated and current_user.is_admin %}
+                                <a href="{{ url_for('admin.users_management') }}" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                                    </svg>
+                                    User Management
+                                </a>
+                                {% endif %}
+
+                                <a href="#" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    Settings
+                                </a>
+                            </div>
+
+                            <div class="border-t border-gray-700">
+                                <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                    </svg>
+                                    Logout
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Left Sidebar - Slides Overview -->
+            <div class="lg:col-span-1">
+                <div class="bg-gray-800 rounded-lg shadow-xl p-4 sticky top-4 border border-gray-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-100">Slides</h2>
+                        <span class="px-2 py-1 bg-cyan-500/20 text-cyan-400 text-xs font-bold rounded-full" id="slideCount">0</span>
+                    </div>
+
+                    <!-- Slides List -->
+                    <div class="space-y-2 mb-4 max-h-96 overflow-y-auto" id="slidesList">
+                        <p class="text-sm text-gray-400 text-center py-8">Belum ada slide. Klik tombol di bawah untuk menambahkan.</p>
+                    </div>
+
+                    <!-- Add Slide Button -->
+                    <button 
+                        onclick="addNewSlide()"
+                        class="w-full px-4 py-3 border-2 border-dashed border-cyan-500 text-cyan-400 rounded-lg hover:bg-cyan-500/10 transition font-medium"
+                    >
+                        + Add Slide
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Editor Area -->
+            <div class="lg:col-span-3">
+                <!-- Session Settings -->
+                <div class="bg-gray-800 rounded-lg shadow-xl p-6 mb-6 border border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-100 mb-4">Session Settings</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                Session Title
+                            </label>
+                            <input 
+                                type="text" 
+                                id="sessionTitle"
+                                placeholder="e.g., Developer Survey 2025"
+                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 placeholder-gray-400"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                Description (Optional)
+                            </label>
+                            <input 
+                                type="text" 
+                                id="sessionDescription"
+                                placeholder="Brief description"
+                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 placeholder-gray-400"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slide Editor -->
+                <div id="slideEditor" class="hidden">
+                    <!-- Will be populated dynamically -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="bg-gray-800 rounded-lg shadow-xl p-12 text-center border border-gray-700">
+                    <svg class="w-24 h-24 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <h3 class="text-xl font-semibold text-gray-300 mb-2">No Slides Yet</h3>
+                    <p class="text-gray-400 mb-6">Start building your poll by adding your first slide</p>
+                    <button 
+                        onclick="addNewSlide()"
+                        class="px-6 py-3 bg-lime-500 text-gray-900 rounded-lg hover:bg-lime-400 transition font-semibold"
+                    >
+                        Add First Slide
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let slides = [];
+        let currentSlideIndex = null;
+
+        function addNewSlide() {
+            const newSlide = {
+                id: Date.now(),
+                slideNumber: slides.length + 1,
+                question: '',
+                type: 'multiple_choice',
+                options: ['', ''],
+                image: null, // Store base64 or URL
+                imageFile: null, // Store file object for upload
+                settings: {
+                    allowMultiple: false,
+                    anonymous: true,
+                    showResults: true
+                }
+            };
+            slides.push(newSlide);
+            updateSlidesList();
+            editSlide(slides.length - 1);
+            document.getElementById('emptyState').classList.add('hidden');
+        }
+
+        function updateSlidesList() {
+            const container = document.getElementById('slidesList');
+            document.getElementById('slideCount').textContent = slides.length;
+
+            if (slides.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Belum ada slide. Klik tombol di bawah untuk menambahkan.</p>';
+                return;
+            }
+
+            container.innerHTML = slides.map((slide, index) => {
+                const isActive = index === currentSlideIndex;
+                const questionPreview = slide.question || 'Untitled Slide';
+                const typeLabel = slide.type === 'multiple_choice' ? '📊 Multiple Choice' : '☁️ Word Cloud';
+                const hasImage = slide.image ? '🖼️ ' : '';
+                return `
+                    <div class="group relative p-3 rounded-lg border-2 ${isActive ? 'border-cyan-500 bg-cyan-500/10' : 'border-gray-700 hover:border-cyan-500/50'} cursor-pointer transition" onclick="editSlide(${index})">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 pr-2">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs font-semibold ${isActive ? 'text-cyan-400' : 'text-gray-500'}">Slide ${index + 1}</span>
+                                    ${isActive ? '<span class="px-2 py-0.5 bg-cyan-500 text-gray-900 text-xs rounded-full font-bold">Editing</span>' : ''}
+                                </div>
+                                <p class="text-sm font-medium text-gray-200 truncate">${questionPreview}</p>
+                                <p class="text-xs text-gray-500 mt-1">${hasImage}${typeLabel}</p>
+                            </div>
+                            <div class="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition">
+                                <button onclick="event.stopPropagation(); moveSlideUp(${index})" ${index === 0 ? 'disabled' : ''} class="p-1 hover:bg-gray-600 rounded disabled:opacity-30" title="Move Up">
+                                    <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                                </button>
+                                <button onclick="event.stopPropagation(); moveSlideDown(${index})" ${index === slides.length - 1 ? 'disabled' : ''} class="p-1 hover:bg-gray-600 rounded disabled:opacity-30" title="Move Down">
+                                    <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <button onclick="event.stopPropagation(); duplicateSlide(${index})" class="p-1 hover:bg-gray-600 rounded" title="Duplicate">
+                                    <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteSlide(${index})" class="p-1 hover:bg-red-600/20 rounded" title="Delete">
+                                    <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function editSlide(index) {
+            currentSlideIndex = index;
+            const slide = slides[index];
+            updateSlidesList();
+            const editor = document.getElementById('slideEditor');
+            editor.classList.remove('hidden');
+            
+            // Image upload section
+            const imageSection = `
+                <div class="border-t border-gray-700 pt-6">
+                    <h3 class="text-sm font-semibold text-gray-300 mb-4">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            Poll Image (Optional)
+                        </span>
+                    </h3>
+                    <p class="text-xs text-gray-500 mb-3">Add a visual element to your poll question. Max 5MB. Supported: JPG, PNG, GIF</p>
+                    
+                    <div id="imageUploadArea_${index}">
+                        ${slide.image ? `
+                            <div class="image-preview-container mb-4">
+                                <img src="${slide.image}" alt="Poll image preview" class="border-2 border-gray-600">
+                                <div class="remove-image-btn" onclick="removeSlideImage(${index})">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        ` : `
+                            <label for="imageInput_${index}" class="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-600 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-gray-700/30 transition">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <svg class="w-12 h-12 mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                    </svg>
+                                    <p class="mb-2 text-sm text-gray-400"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                                    <p class="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                                </div>
+                            </label>
+                            <input 
+                                id="imageInput_${index}" 
+                                type="file" 
+                                accept="image/*" 
+                                class="hidden" 
+                                onchange="handleImageUpload(${index}, this)"
+                            >
+                        `}
+                    </div>
+                </div>
+            `;
+            
+            // Word Cloud tidak butuh options
+            const optionsSection = slide.type === 'word_cloud' ? '' : `
+                <div id="optionsSection_${index}">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Answer Options</label>
+                    <div class="space-y-3" id="optionsList_${index}">
+                        ${slide.options.map((opt, optIndex) => `
+                            <div class="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value="${opt}"
+                                    placeholder="Option ${optIndex + 1}"
+                                    class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500 placeholder-gray-400"
+                                    onchange="updateSlideOption(${index}, ${optIndex}, this.value)"
+                                >
+                                <button 
+                                    onclick="removeOption(${index}, ${optIndex})"
+                                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition ${slide.options.length <= 2 ? 'opacity-50 cursor-not-allowed' : ''}"
+                                    ${slide.options.length <= 2 ? 'disabled' : ''}
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button 
+                        onclick="addOption(${index})"
+                        class="mt-3 w-full px-4 py-2 border-2 border-dashed border-gray-600 text-gray-400 rounded-lg hover:border-cyan-500 hover:text-cyan-400 transition"
+                    >
+                        + Add Option
+                    </button>
+                </div>
+            `;
+
+            editor.innerHTML = `
+                <div class="bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-gray-100">Edit Slide ${index + 1}</h2>
+                        <button onclick="closeEditor()" class="text-gray-400 hover:text-gray-200">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Question</label>
+                            <textarea 
+                                id="slideQuestion_${index}"
+                                rows="3"
+                                placeholder="Enter your poll question..."
+                                class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 placeholder-gray-400"
+                                onchange="updateSlideQuestion(${index}, this.value)"
+                            >${slide.question}</textarea>
+                        </div>
+
+                        ${imageSection}
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Poll Type</label>
+                            <select 
+                                id="slideType_${index}"
+                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                                onchange="updateSlideType(${index}, this.value)"
+                            >
+                                <option value="multiple_choice" ${slide.type === 'multiple_choice' ? 'selected' : ''}>📊 Multiple Choice</option>
+                                <option value="word_cloud" ${slide.type === 'word_cloud' ? 'selected' : ''}>☁️ Word Cloud</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-2">
+                                ${slide.type === 'word_cloud' ? '💡 Participants submit short text responses. Popular words appear larger in real-time visualization.' : '💡 Participants choose from predefined options.'}
+                            </p>
+                        </div>
+
+                        ${optionsSection}
+
+                        <div class="border-t border-gray-700 pt-6">
+                            <h3 class="text-sm font-semibold text-gray-300 mb-4">Slide Settings</h3>
+                            <div class="space-y-3">
+                                <label class="flex items-center ${slide.type === 'word_cloud' ? 'opacity-50' : ''}">
+                                    <input 
+                                        type="checkbox" 
+                                        ${slide.settings.allowMultiple ? 'checked' : ''}
+                                        ${slide.type === 'word_cloud' ? 'disabled' : ''}
+                                        onchange="updateSlideSetting(${index}, 'allowMultiple', this.checked)"
+                                        class="w-4 h-4 text-cyan-500 bg-gray-700 border-gray-600 rounded focus:ring-cyan-500"
+                                    >
+                                    <span class="ml-2 text-sm text-gray-300">Allow multiple selections ${slide.type === 'word_cloud' ? '(N/A for Word Cloud)' : ''}</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input 
+                                        type="checkbox" 
+                                        ${slide.settings.anonymous ? 'checked' : ''}
+                                        onchange="updateSlideSetting(${index}, 'anonymous', this.checked)"
+                                        class="w-4 h-4 text-cyan-500 bg-gray-700 border-gray-600 rounded focus:ring-cyan-500"
+                                    >
+                                    <span class="ml-2 text-sm text-gray-300">Anonymous voting</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input 
+                                        type="checkbox" 
+                                        ${slide.settings.showResults ? 'checked' : ''}
+                                        onchange="updateSlideSetting(${index}, 'showResults', this.checked)"
+                                        class="w-4 h-4 text-cyan-500 bg-gray-700 border-gray-600 rounded focus:ring-cyan-500"
+                                    >
+                                    <span class="ml-2 text-sm text-gray-300">Show real-time results to participants</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 pt-4">
+                            <button 
+                                onclick="editSlide(${index - 1})"
+                                ${index === 0 ? 'disabled' : ''}
+                                class="flex-1 px-4 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                ← Previous Slide
+                            </button>
+                            <button 
+                                onclick="editSlide(${index + 1})"
+                                ${index === slides.length - 1 ? 'disabled' : ''}
+                                class="flex-1 px-4 py-3 bg-lime-500 text-gray-900 rounded-lg hover:bg-lime-400 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                            >
+                                Next Slide →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleImageUpload(index, input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.match('image.*')) {
+                showNotification('Please select an image file', 'error');
+                return;
+            }
+
+            // Validate file size (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('Image size must be less than 5MB', 'error');
+                return;
+            }
+
+            // Create preview using FileReader
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                slides[index].image = e.target.result; // Store base64
+                slides[index].imageFile = file; // Store file for upload
+                editSlide(index); // Re-render to show preview
+                showNotification('Image uploaded successfully', 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeSlideImage(index) {
+            slides[index].image = null;
+            slides[index].imageFile = null;
+            editSlide(index);
+            updateSlidesList();
+            showNotification('Image removed', 'info');
+        }
+
+        function updateSlideQuestion(index, value) {
+            slides[index].question = value;
+            updateSlidesList();
+        }
+
+        function updateSlideType(index, value) {
+            slides[index].type = value;
+            if (value === 'word_cloud') {
+                slides[index].options = [];
+                slides[index].settings.allowMultiple = false;
+            } else if (value === 'multiple_choice') {
+                slides[index].options = ['', ''];
+            }
+            editSlide(index);
+        }
+
+        function updateSlideOption(index, optIndex, value) {
+            slides[index].options[optIndex] = value;
+        }
+
+        function updateSlideSetting(index, setting, value) {
+            slides[index].settings[setting] = value;
+        }
+
+        function addOption(index) {
+            slides[index].options.push('');
+            editSlide(index);
+        }
+
+        function removeOption(index, optIndex) {
+            if (slides[index].options.length > 2) {
+                slides[index].options.splice(optIndex, 1);
+                editSlide(index);
+            }
+        }
+
+        function moveSlideUp(index) {
+            if (index > 0) {
+                [slides[index - 1], slides[index]] = [slides[index], slides[index - 1]];
+                currentSlideIndex = index - 1;
+                updateSlidesList();
+                editSlide(currentSlideIndex);
+            }
+        }
+
+        function moveSlideDown(index) {
+            if (index < slides.length - 1) {
+                [slides[index], slides[index + 1]] = [slides[index + 1], slides[index]];
+                currentSlideIndex = index + 1;
+                updateSlidesList();
+                editSlide(currentSlideIndex);
+            }
+        }
+
+        function duplicateSlide(index) {
+            const duplicate = JSON.parse(JSON.stringify(slides[index]));
+            duplicate.id = Date.now();
+            // Don't duplicate imageFile object
+            duplicate.imageFile = null;
+            slides.splice(index + 1, 0, duplicate);
+            updateSlidesList();
+            editSlide(index + 1);
+        }
+
+        function deleteSlide(index) {
+            if (confirm('Delete this slide?')) {
+                slides.splice(index, 1);
+                if (slides.length === 0) {
+                    document.getElementById('emptyState').classList.remove('hidden');
+                    document.getElementById('slideEditor').classList.add('hidden');
+                    currentSlideIndex = null;
+                } else {
+                    const newIndex = Math.min(index, slides.length - 1);
+                    editSlide(newIndex);
+                }
+                updateSlidesList();
+            }
+        }
+
+        function closeEditor() {
+            currentSlideIndex = null;
+            document.getElementById('slideEditor').classList.add('hidden');
+            updateSlidesList();
+        }
+
+        async function createSession() {
+            const title = document.getElementById('sessionTitle').value;
+            const description = document.getElementById('sessionDescription').value;
+
+            if (!title) {
+                showNotification('Please enter a session title', 'error');
+                return;
+            }
+            if (slides.length === 0) {
+                showNotification('Add at least one slide', 'error');
+                return;
+            }
+            const emptySlides = slides.filter(s => !s.question.trim());
+            if (emptySlides.length > 0) {
+                showNotification('All slides must have a question', 'error');
+                return;
+            }
+
+            // Use FormData to support file uploads
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            
+            // Add slides data
+            const slidesData = slides.map((slide, index) => ({
+                slideNumber: index + 1,
+                question: slide.question,
+                type: slide.type,
+                options: slide.type === 'word_cloud' ? [] : slide.options.filter(opt => opt.trim() !== ''),
+                settings: slide.settings,
+                hasImage: !!slide.image
+            }));
+            
+            formData.append('slides', JSON.stringify(slidesData));
+            
+            // Add image files
+            slides.forEach((slide, index) => {
+                if (slide.imageFile) {
+                    formData.append(`slide_${index}_image`, slide.imageFile);
+                }
+            });
+
+            try {
+                const response = await fetch('/admin/api/sessions', {
+                    method: 'POST',
+                    body: formData // Send FormData instead of JSON
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showNotification('Session created successfully!', 'success');
+                    localStorage.removeItem('pollDraft');
+                    setTimeout(() => {
+                        window.location.href = `/admin/dashboard/${result.session_code}`;
+                    }, 1500);
+                } else {
+                    showNotification('Failed: ' + (result.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Network error', 'error');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: { bg: 'bg-gray-800', border: 'border-lime-500', icon: 'text-lime-400', progress: 'bg-lime-500' },
+                error: { bg: 'bg-gray-800', border: 'border-red-500', icon: 'text-red-400', progress: 'bg-red-500' },
+                warning: { bg: 'bg-gray-800', border: 'border-yellow-500', icon: 'text-yellow-400', progress: 'bg-yellow-500' },
+                info: { bg: 'bg-gray-800', border: 'border-cyan-500', icon: 'text-cyan-400', progress: 'bg-cyan-500' }
+            };
+
+            const icons = {
+                success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
+                error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
+                warning: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>',
+                info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
+            };
+
+            const style = colors[type];
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 ${style.bg} rounded-lg shadow-2xl p-4 border-l-4 ${style.border} animate-slideIn`;
+            notification.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <svg class="w-5 h-5 ${style.icon}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            ${icons[type]}
+                        </svg>
+                    </div>
+                    <div class="flex-1 text-sm text-gray-100 font-medium">${message}</div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="flex-shrink-0 text-gray-400 hover:text-gray-200 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 4000);
+        }
+
+        window.addEventListener('load', () => {
+            const draft = localStorage.getItem('pollDraft');
+            if (draft) {
+                try {
+                    const data = JSON.parse(draft);
+                    document.getElementById('sessionTitle').value = data.title || '';
+                    document.getElementById('sessionDescription').value = data.description || '';
+                    if (data.slides && data.slides.length > 0) {
+                        slides = data.slides;
+                        updateSlidesList();
+                        document.getElementById('emptyState').classList.add('hidden');
+                        showNotification('Draft loaded', 'info');
+                    }
+                } catch (e) {
+                    console.error('Error loading draft:', e);
+                }
+            }
+        });
+
+        // Toggle user menu dropdown
+        function toggleUserMenu() {
+            const menu = document.getElementById('userMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('userMenuContainer');
+            const menu = document.getElementById('userMenu');
+            
+            if (container && !container.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Close dropdown on escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                document.getElementById('userMenu').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

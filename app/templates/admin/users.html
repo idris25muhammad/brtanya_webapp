@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - BRTanya</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fade-in 0.3s ease-out; }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen text-gray-100">
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <img src="{{ url_for('static', filename='images/brtanya_logo.png') }}" alt="BRTanya Logo" class="h-10 w-auto">
+                    <div>
+                        <h1 class="text-xl font-bold text-cyan-400">User Management</h1>
+                        <p class="text-sm text-gray-400">Kelola akun pengguna</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <a href="/admin" class="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition">
+                        ← Back
+                    </a>
+                    <a href="/auth/logout" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6 space-y-2">
+                    {% for category, message in messages %}
+                    <div class="p-4 rounded-lg border {% if category == 'success' %}bg-lime-900/30 border-lime-700 text-lime-300{% else %}bg-red-900/30 border-red-700 text-red-300{% endif %} animate-fade-in">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-cyan-500">
+                <p class="text-sm text-gray-400">Total Users</p>
+                <p class="text-3xl font-bold text-cyan-400 mt-1">{{ total_users }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-lime-500">
+                <p class="text-sm text-gray-400">Active Users</p>
+                <p class="text-3xl font-bold text-lime-400 mt-1">{{ active_users }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-purple-500">
+                <p class="text-sm text-gray-400">Admins</p>
+                <p class="text-3xl font-bold text-purple-400 mt-1">{{ total_admins }}</p>
+            </div>
+        </div>
+
+        <!-- Actions Bar -->
+        <div class="bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border border-gray-700 flex justify-between items-center">
+            <input 
+                type="text" 
+                id="searchInput"
+                placeholder="🔍 Search users..."
+                class="px-4 py-2 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500 w-80"
+                onkeyup="searchUsers()"
+            >
+            <button 
+                onclick="openAddModal()"
+                class="px-6 py-2 bg-gradient-to-r from-cyan-500 to-lime-500 text-white rounded-lg font-bold hover:shadow-lg hover:scale-105 transition-all"
+            >
+                ➕ Add New User
+            </button>
+        </div>
+
+        <!-- Users Table -->
+        <div class="bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b-2 border-gray-700">
+                            <th class="text-left py-4 px-6 font-bold text-cyan-400">Username</th>
+                            <th class="text-left py-4 px-6 font-bold text-cyan-400">Email</th>
+                            <th class="text-left py-4 px-6 font-bold text-cyan-400">Full Name</th>
+                            <th class="text-center py-4 px-6 font-bold text-cyan-400">Role</th>
+                            <th class="text-center py-4 px-6 font-bold text-cyan-400">Status</th>
+                            <th class="text-center py-4 px-6 font-bold text-cyan-400">Sessions</th>
+                            <th class="text-center py-4 px-6 font-bold text-cyan-400">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        {% for user in users %}
+                        <tr class="border-b border-gray-700 hover:bg-gray-700/30 transition user-row">
+                            <td class="py-4 px-6 font-semibold text-gray-200">{{ user.username }}</td>
+                            <td class="py-4 px-6 text-gray-300">{{ user.email }}</td>
+                            <td class="py-4 px-6 text-gray-300">{{ user.full_name or '-' }}</td>
+                            <td class="py-4 px-6 text-center">
+                                <span class="px-3 py-1 {% if user.is_admin %}bg-purple-500/20 text-purple-300{% else %}bg-gray-600 text-gray-300{% endif %} text-xs font-bold rounded-full">
+                                    {% if user.is_admin %}👑 Admin{% else %}User{% endif %}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6 text-center">
+                                <span class="px-3 py-1 {% if user.is_active %}bg-lime-500/20 text-lime-300{% else %}bg-red-500/20 text-red-300{% endif %} text-xs font-bold rounded-full">
+                                    {% if user.is_active %}✅ Active{% else %}❌ Inactive{% endif %}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6 text-center text-gray-300 font-bold">{{ user.sessions|length }}</td>
+                            <td class="py-4 px-6">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button 
+                                        onclick='openEditModal({{ user.id }}, "{{ user.username }}", "{{ user.email }}", "{{ user.full_name or "" }}", {{ user.is_admin|lower }}, {{ user.is_active|lower }})'
+                                        class="px-3 py-1.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition text-sm font-medium"
+                                    >
+                                        ✏️ Edit
+                                    </button>
+                                    <button 
+                                        onclick='openDeleteModal({{ user.id }}, "{{ user.username }}")'
+                                        class="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+                                    >
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-12 text-gray-500">No users found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit User Modal -->
+    <div id="userModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-8 border border-gray-700 animate-fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400" id="modalTitle">Add New User</h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-200 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="userForm" method="POST" class="space-y-4">
+                <input type="hidden" name="action" id="formAction" value="add">
+                <input type="hidden" name="user_id" id="userId">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Username *</label>
+                    <input 
+                        type="text" 
+                        name="username"
+                        id="username"
+                        required
+                        class="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                    >
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Email *</label>
+                    <input 
+                        type="email" 
+                        name="email"
+                        id="email"
+                        required
+                        class="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                    >
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
+                    <input 
+                        type="text" 
+                        name="full_name"
+                        id="full_name"
+                        class="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                    >
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Password <span id="passwordHint"></span></label>
+                    <input 
+                        type="password" 
+                        name="password"
+                        id="password"
+                        minlength="6"
+                        class="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                        placeholder="Min. 6 characters"
+                    >
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <label class="flex items-center cursor-pointer p-4 bg-gray-700 rounded-lg border border-gray-600 hover:border-cyan-500 transition">
+                        <input 
+                            type="checkbox" 
+                            name="is_admin"
+                            id="is_admin"
+                            class="w-4 h-4 text-cyan-500 bg-gray-800 border-gray-600 rounded"
+                        >
+                        <span class="ml-2 text-sm text-gray-200 font-medium">Is Admin</span>
+                    </label>
+
+                    <label class="flex items-center cursor-pointer p-4 bg-gray-700 rounded-lg border border-gray-600 hover:border-lime-500 transition">
+                        <input 
+                            type="checkbox" 
+                            name="is_active"
+                            id="is_active"
+                            checked
+                            class="w-4 h-4 text-lime-500 bg-gray-800 border-gray-600 rounded"
+                        >
+                        <span class="ml-2 text-sm text-gray-200 font-medium">Is Active</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button 
+                        type="submit"
+                        class="flex-1 bg-gradient-to-r from-cyan-500 to-lime-500 text-white px-6 py-3 rounded-lg font-bold hover:shadow-lg transition"
+                    >
+                        💾 Save User
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="closeModal()"
+                        class="px-6 py-3 border-2 border-gray-600 text-gray-300 rounded-lg font-medium hover:bg-gray-700 transition"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-8 border border-red-700 animate-fade-in">
+            <h3 class="text-2xl font-bold text-red-400 mb-4">⚠️ Confirm Delete</h3>
+            <p class="text-gray-300 mb-6">Are you sure you want to delete user <strong id="deleteUsername" class="text-red-400"></strong>?</p>
+            <p class="text-sm text-gray-500 mb-6">This will also delete all their sessions!</p>
+            
+            <form method="POST">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="user_id" id="deleteUserId">
+                
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 bg-red-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-700 transition">
+                        Delete
+                    </button>
+                    <button type="button" onclick="closeDeleteModal()" class="px-6 py-3 border-2 border-gray-600 text-gray-300 rounded-lg font-medium hover:bg-gray-700 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add New User';
+            document.getElementById('formAction').value = 'add';
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+            document.getElementById('password').required = true;
+            document.getElementById('passwordHint').textContent = '*';
+            document.getElementById('is_active').checked = true;
+            document.getElementById('userModal').classList.remove('hidden');
+        }
+
+        function openEditModal(id, username, email, fullName, isAdmin, isActive) {
+            document.getElementById('modalTitle').textContent = 'Edit User';
+            document.getElementById('formAction').value = 'edit';
+            document.getElementById('userId').value = id;
+            document.getElementById('username').value = username;
+            document.getElementById('email').value = email;
+            document.getElementById('full_name').value = fullName;
+            document.getElementById('password').value = '';
+            document.getElementById('password').required = false;
+            document.getElementById('passwordHint').textContent = '(leave blank to keep current)';
+            document.getElementById('is_admin').checked = isAdmin;
+            document.getElementById('is_active').checked = isActive;
+            document.getElementById('userModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').classList.add('hidden');
+        }
+
+        function openDeleteModal(id, username) {
+            document.getElementById('deleteUserId').value = id;
+            document.getElementById('deleteUsername').textContent = username;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        function searchUsers() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('.user-row');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(search) ? '' : 'none';
+            });
+        }
+
+        // Close modal on ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeDeleteModal();
+            }
+        });
+    </script>
+</body>
+</html>

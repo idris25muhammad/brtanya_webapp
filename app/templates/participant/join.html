@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Poll - BRTanya</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(34, 211, 238, 0.6); }
+        }
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .float { animation: float 3s ease-in-out infinite; }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .gradient-animate {
+            background: linear-gradient(-45deg, #22d3ee, #a3e635, #a855f7, #fbbf24);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        .poll-image {
+            transition: transform 0.3s ease;
+        }
+        .poll-image:hover {
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen text-gray-100">
+    <!-- Top Copyright Bar -->
+    <div class="w-full bg-gray-800/80 border-b border-gray-700 text-gray-300 text-xs sm:text-sm">
+        <div class="max-w-7xl mx-auto px-4 py-2 text-center">
+            © 2025 Politeknik Negeri Batam
+        </div>
+    </div>
+
+    <!-- Join Screen with Landing -->
+    <div id="joinScreen" class="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
+        <!-- Background decoration -->
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute top-20 left-10 w-72 h-72 bg-cyan-500 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-20 right-10 w-96 h-96 bg-purple-500 rounded-full blur-3xl"></div>
+            <div class="absolute top-1/2 left-1/2 w-64 h-64 bg-lime-500 rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="max-w-6xl mx-auto w-full relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <!-- Left side: Hero content -->
+                <div class="text-center lg:text-left">
+                    <div class="mb-8">
+                        <img src="{{ url_for('static', filename='images/brtanya_logo.png') }}" alt="BRTanya Logo" class="h-20 w-auto mx-auto lg:mx-0 mb-6 float">
+                        <p class="text-xl text-gray-400 mb-6">Berpartisipasi dalam polling interaktif secara real-time</p>
+                    </div>
+
+                    <!-- Features -->
+                    <div class="space-y-4 mb-8">
+                        <div class="flex items-start gap-4">
+                            <div class="p-2 bg-cyan-500/20 rounded-lg">
+                                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-100">Real-time Response</h3>
+                                <p class="text-gray-400 text-sm">Lihat hasil voting secara langsung</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4">
+                            <div class="p-2 bg-lime-500/20 rounded-lg">
+                                <svg class="w-6 h-6 text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-100">Aman & Anonymous</h3>
+                                <p class="text-gray-400 text-sm">Voting anonim dan data terenkripsi</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4">
+                            <div class="p-2 bg-purple-500/20 rounded-lg">
+                                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-100">Multi-device</h3>
+                                <p class="text-gray-400 text-sm">Akses dari smartphone, tablet, atau PC</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right side: Join form -->
+                <div class="w-full">
+                    <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-700 backdrop-blur">
+                        <div class="text-center mb-6">
+                            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-cyan-500 to-purple-500 rounded-full mb-4">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                                </svg>
+                            </div>
+                            <p class="text-sm text-gray-400">Masukkan kode 6 digit dari presenter</p>
+                        </div>
+
+                        <form id="joinForm" class="space-y-6">
+                            <div>
+                                <label for="pollCode" class="block text-sm font-medium text-gray-300 mb-2">
+                                    Kode Session
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="pollCode" 
+                                    name="pollCode"
+                                    placeholder="ABC123"
+                                    maxlength="6"
+                                    value="{{ session_code }}"
+                                    class="w-full px-4 py-4 text-center text-3xl font-bold uppercase bg-gray-700 border-2 border-gray-600 text-cyan-400 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition placeholder-gray-500"
+                                    required
+                                >
+                                <p class="text-xs text-gray-500 mt-2 text-center">Dapatkan kode dari presenter atau scan QR code</p>
+                            </div>
+
+                            <button 
+                                type="submit"
+                                class="w-full bg-gradient-to-r from-cyan-500 via-lime-500 to-purple-500 text-white px-6 py-4 rounded-lg font-bold text-lg hover:shadow-lg hover:scale-105 focus:ring-4 focus:ring-cyan-300 transition-all shadow-lg"
+                            >
+                                🚀 Join Sekarang
+                            </button>
+                        </form>
+
+                        <div id="errorMessage" class="hidden mt-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm text-center"></div>
+
+                        <div class="mt-6 pt-6 border-t border-gray-700">
+                            <p class="text-xs text-gray-500 text-center">
+                                Dengan bergabung, Anda setuju dengan <a href="#" class="text-cyan-400 hover:underline">Terms of Service</a>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Quick tips -->
+                    <div class="mt-6 p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+                        <p class="text-sm text-cyan-300"><strong>💡 Tips:</strong> Pastikan koneksi internet stabil untuk pengalaman terbaik</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Waiting Screen -->
+    <div id="waitingScreen" class="hidden min-h-screen flex items-center justify-center px-4">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md text-center border border-gray-700">
+            <div class="mb-6">
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-lime-500/20 rounded-full mb-4 pulse-glow">
+                    <svg class="w-10 h-10 text-lime-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-cyan-400 mb-2">✅ Connected!</h2>
+                <p class="text-gray-400">Session: <span class="font-semibold text-lime-400" id="waitingSessionCode"></span></p>
+            </div>
+
+            <div class="bg-gray-700/50 rounded-lg p-6 mb-6 border border-gray-600">
+                <p class="text-gray-300 mb-2">Menunggu presenter memulai poll...</p>
+                <div class="flex justify-center gap-2 mt-4">
+                    <div class="w-3 h-3 bg-cyan-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                    <div class="w-3 h-3 bg-lime-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                    <div class="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center gap-2 text-sm text-gray-400 mb-6">
+                <div class="w-2 h-2 bg-lime-500 rounded-full animate-pulse"></div>
+                <span><span id="participantCount" class="text-lime-400 font-bold">0</span> participants online</span>
+            </div>
+
+            <button 
+                onclick="leaveSession()"
+                class="text-red-400 hover:text-red-300 font-medium text-sm transition"
+            >
+                Keluar dari session
+            </button>
+        </div>
+    </div>
+
+    <!-- Voting Screen -->
+    <div id="votingScreen" class="hidden min-h-screen py-8 px-4">
+        <div class="max-w-3xl mx-auto">
+            <div class="bg-gray-800 rounded-lg shadow-xl p-4 mb-6 border border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-400">Session: <span class="font-semibold text-cyan-400" id="votingSessionCode"></span></p>
+                        <p class="text-sm text-gray-300 mt-1">📊 Slide <span id="currentSlideDisplay" class="text-lime-400 font-bold">1</span> of <span id="totalSlidesDisplay" class="text-gray-400">5</span></p>
+                    </div>
+                    <button 
+                        onclick="leaveSession()"
+                        class="px-3 py-1.5 bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-600/50 rounded-lg font-medium text-sm transition"
+                    >
+                        Keluar
+                    </button>
+                </div>
+
+                <div class="mt-3 w-full bg-gray-700 rounded-full h-2">
+                    <div id="participantProgressBar" class="bg-gradient-to-r from-cyan-500 via-lime-500 to-purple-500 h-2 rounded-full transition-all duration-300 shadow-lg" style="width: 20%"></div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg shadow-2xl p-6 sm:p-8 border border-gray-700">
+                <div class="mb-6">
+                    <div class="flex items-start gap-3 mb-3">
+                        <div class="p-2 bg-purple-500/20 rounded-lg">
+                            <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-2xl font-bold text-gray-100 mb-2 leading-tight" id="pollQuestion">Loading...</h3>
+                            <p class="text-sm text-gray-400" id="pollInfo">Waiting for question...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Poll Image Section -->
+                <div id="pollImageContainer" class="hidden mb-6">
+                    <div class="relative rounded-lg overflow-hidden border-2 border-gray-700 shadow-lg">
+                        <img 
+                            id="pollImage" 
+                            src="" 
+                            alt="Poll visual" 
+                            class="w-full h-auto poll-image object-cover"
+                            style="max-height: 400px;"
+                        >
+                        <div class="absolute top-3 right-3 px-3 py-1 bg-purple-600/90 backdrop-blur-sm text-white text-xs font-bold rounded-full flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            Poll Visual
+                        </div>
+                    </div>
+                </div>
+
+                <div id="multipleChoiceContainer" class="space-y-3 hidden"></div>
+
+                <!-- Word Cloud Container -->
+                <div id="wordCloudContainer" class="hidden space-y-4">
+                    <input 
+                        type="text"
+                        id="wordCloudAnswer"
+                        placeholder="☁️ Ketik 1-2 kata (contoh: 'sangat baik')"
+                        maxlength="50"
+                        oninput="checkWordCloudAnswer()"
+                        class="w-full px-4 py-3 bg-gray-700 border-2 border-gray-600 text-gray-100 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 placeholder-gray-500 text-lg"
+                    >
+                    <div class="flex items-center justify-between text-xs">
+                        <span id="wordCloudError" class="text-red-400 hidden">⚠️ Maksimal 2 kata saja!</span>
+                        <span id="wordCloudInfo" class="text-gray-500"><span id="wordCount">0</span>/2 kata</span>
+                    </div>
+                    <div class="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
+                        <p class="text-xs text-cyan-300">💡 <strong>Tips:</strong> Tulis respons singkat dalam 1-2 kata. Contoh: "sangat puas", "kurang baik", "inovatif"</p>
+                    </div>
+                </div>
+
+                <button 
+                    id="submitVoteBtn"
+                    onclick="submitVote()
+"
+                    class="w-full mt-6 bg-gradient-to-r from-cyan-500 via-lime-500 to-purple-500 text-white px-6 py-4 rounded-lg font-bold text-lg hover:shadow-lg hover:scale-105 focus:ring-4 focus:ring-lime-300 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    disabled
+                >
+                    🚀 Submit Vote
+                </button>
+            </div>
+
+            <div class="mt-4 flex items-center justify-center gap-2 text-sm text-gray-400">
+                <div class="w-2 h-2 bg-lime-500 rounded-full animate-pulse"></div>
+                <span>Connected • <span id="onlineParticipants" class="text-lime-400 font-bold">0</span> participants</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Waiting for Next Slide Screen -->
+    <div id="waitingNextScreen" class="hidden min-h-screen flex items-center justify-center px-4">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md text-center border border-gray-700">
+            <div class="bg-lime-500/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 pulse-glow">
+                <svg class="w-10 h-10 text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-lime-400 mb-2">✅ Vote Submitted!</h2>
+            <p class="text-gray-400 mb-6">Terima kasih atas partisipasi Anda</p>
+            
+            <div class="bg-gray-700/50 rounded-lg p-6 border border-gray-600">
+                <p class="text-gray-300 mb-2">Menunggu slide berikutnya...</p>
+                <div class="flex justify-center gap-2 mt-4">
+                    <div class="w-3 h-3 bg-cyan-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                    <div class="w-3 h-3 bg-lime-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                    <div class="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                </div>
+            </div>
+
+            <p class="text-sm text-gray-500 mt-6">Slide <span id="waitingSlideNum" class="text-cyan-400 font-bold">1</span> of <span id="waitingTotalSlides">5</span></p>
+        </div>
+    </div>
+
+    <!-- Completion Screen -->
+    <div id="completionScreen" class="hidden min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md text-center border border-gray-700 relative z-10">
+            <div class="bg-gradient-to-br from-lime-500 to-cyan-500 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 pulse-glow">
+                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            
+            <h2 class="text-3xl font-bold text-lime-400 mb-3">🎉 Poll Selesai!</h2>
+            <p class="text-lg text-gray-300 mb-6">Terima kasih telah menyelesaikan semua slide dalam session ini!</p>
+            
+            <div class="bg-gray-700/50 rounded-lg p-6 mb-6 border border-gray-600">
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <p class="text-3xl font-bold text-cyan-400" id="completedSlides">0</p>
+                        <p class="text-sm text-gray-400 mt-1">Slides Completed</p>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold text-purple-400" id="totalResponses">0</p>
+                        <p class="text-sm text-gray-400 mt-1">Your Responses</p>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-sm text-gray-400 mb-6">Kontribusi Anda sangat berarti untuk kami. Semua feedback akan digunakan untuk perbaikan ke depan.</p>
+
+            <div class="space-y-3">
+                <button 
+                    onclick="window.location.href='/'"
+                    class="w-full bg-lime-500 text-gray-900 px-6 py-3 rounded-lg font-bold hover:bg-lime-400 transition shadow-lg"
+                >
+                    🏠 Kembali ke Home
+                </button>
+                <button 
+                    onclick="location.reload()"
+                    class="w-full border-2 border-gray-600 text-gray-300 px-6 py-3 rounded-lg font-medium hover:bg-gray-700 transition"
+                >
+                    Join Session Lain
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Ended Screen -->
+    <div id="endedScreen" class="hidden min-h-screen flex items-center justify-center px-4">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md text-center border border-gray-700">
+            <div class="bg-red-500/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-100 mb-2">Session Ended</h2>
+            <p class="text-gray-400 mb-6">Presenter telah mengakhiri polling session</p>
+            
+            <button 
+                onclick="location.reload()"
+                class="w-full bg-lime-500 text-gray-900 px-6 py-3 rounded-lg font-bold hover:bg-lime-400 transition shadow-lg"
+            >
+                Join Session Baru
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let socket, sessionCode = '', participantId = null, currentPollId = null, currentSlideIndex = 0, totalSlides = 0, selectedAnswer = null, hasVoted = false, totalVotesCount = 0, currentPollType = '';
+
+        document.getElementById('joinForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            sessionCode = document.getElementById('pollCode').value.toUpperCase().trim();
+            if (!sessionCode) {
+                showError('Masukkan kode session');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_code: sessionCode })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    totalSlides = result.session.total_polls;
+                    document.getElementById('waitingSessionCode').textContent = sessionCode;
+                    document.getElementById('votingSessionCode').textContent = sessionCode;
+                    document.getElementById('joinScreen').classList.add('hidden');
+                    document.getElementById('waitingScreen').classList.remove('hidden');
+                    initializeSocket();
+                } else {
+                    showError(result.error || 'Session tidak ditemukan');
+                }
+            } catch (error) {
+                console.error('Join error:', error);
+                showError('Gagal terhubung ke server');
+            }
+        });
+
+        function initializeSocket() {
+            socket = io();
+            socket.on('connect', () => {
+                console.log('Connected');
+                socket.emit('join_session', { session_code: sessionCode });
+            });
+            socket.on('session_joined', (data) => {
+                console.log('Joined:', data);
+                participantId = data.participant_id;
+                currentSlideIndex = data.current_slide;
+                totalSlides = data.total_slides;
+                if (data.current_poll) loadPoll(data.current_poll, data.current_slide);
+            });
+            socket.on('slide_changed', (data) => {
+                console.log('Slide changed:', data);
+                currentSlideIndex = data.slide_index;
+                if (data.poll) {
+                    loadPoll(data.poll, data.slide_index);
+                } else {
+                    showCompletionScreen();
+                }
+            });
+            socket.on('participant_joined', (data) => {
+                document.getElementById('participantCount').textContent = data.count;
+                document.getElementById('onlineParticipants').textContent = data.count;
+            });
+            socket.on('participant_left', (data) => {
+                document.getElementById('participantCount').textContent = data.count;
+                document.getElementById('onlineParticipants').textContent = data.count;
+            });
+            socket.on('session_ended', () => showEndedScreen());
+            socket.on('disconnect', () => console.log('Disconnected'));
+        }
+
+        function loadPoll(poll, slideIndex) {
+            currentPollId = poll.id;
+            currentSlideIndex = slideIndex;
+            currentPollType = poll.poll_type;
+            hasVoted = false;
+            selectedAnswer = null;
+
+            document.getElementById('currentSlideDisplay').textContent = slideIndex + 1;
+            document.getElementById('totalSlidesDisplay').textContent = totalSlides;
+            document.getElementById('pollQuestion').textContent = poll.question;
+
+            const progress = ((slideIndex + 1) / totalSlides) * 100;
+            document.getElementById('participantProgressBar').style.width = progress + '%';
+
+            // Handle poll image
+            const pollImageContainer = document.getElementById('pollImageContainer');
+            const pollImage = document.getElementById('pollImage');
+            
+            if (poll.image_url) {
+                pollImage.src = poll.image_url;
+                pollImage.onerror = function() {
+                    pollImageContainer.classList.add('hidden');
+                };
+                pollImageContainer.classList.remove('hidden');
+            } else {
+                pollImageContainer.classList.add('hidden');
+            }
+
+            document.getElementById('multipleChoiceContainer').classList.add('hidden');
+            document.getElementById('wordCloudContainer').classList.add('hidden');
+
+            if (poll.poll_type === 'multiple_choice') {
+                document.getElementById('pollInfo').textContent = '📊 Multiple Choice • Pilih satu jawaban';
+                renderMultipleChoice(poll.options);
+            } else if (poll.poll_type === 'word_cloud') {
+                document.getElementById('pollInfo').textContent = '☁️ Word Cloud • Tulis 1-2 kata singkat';
+                document.getElementById('wordCloudContainer').classList.remove('hidden');
+                document.getElementById('wordCloudAnswer').value = '';
+                document.getElementById('wordCount').textContent = '0';
+                document.getElementById('wordCloudError').classList.add('hidden');
+            }
+
+            document.getElementById('submitVoteBtn').disabled = true;
+            document.getElementById('waitingScreen').classList.add('hidden');
+            document.getElementById('waitingNextScreen').classList.add('hidden');
+            document.getElementById('completionScreen').classList.add('hidden');
+            document.getElementById('votingScreen').classList.remove('hidden');
+        }
+
+        function renderMultipleChoice(options) {
+            const container = document.getElementById('multipleChoiceContainer');
+            container.classList.remove('hidden');
+            container.innerHTML = options.map((option, index) => `
+                <button 
+                    type="button"
+                    onclick="selectOption(this, '${option.replace(/'/g, "\\'")}')"
+                    class="option-btn w-full text-left px-6 py-4 bg-gray-700 border-2 border-gray-600 rounded-lg hover:border-cyan-500 hover:bg-cyan-500/10 transition group"
+                >
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-gray-200 group-hover:text-cyan-400 transition">${option}</span>
+                        <span class="w-6 h-6 rounded-full border-2 border-gray-500 group-hover:border-cyan-500 transition"></span>
+                    </div>
+                </button>
+            `).join('');
+        }
+
+        function selectOption(button, answer) {
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.classList.remove('border-cyan-500', 'bg-cyan-500/10');
+                btn.classList.add('border-gray-600', 'bg-gray-700');
+                const circle = btn.querySelector('span:last-child');
+                circle.innerHTML = '';
+                circle.className = 'w-6 h-6 rounded-full border-2 border-gray-500';
+            });
+
+            button.classList.remove('border-gray-600', 'bg-gray-700');
+            button.classList.add('border-cyan-500', 'bg-cyan-500/10');
+            const circle = button.querySelector('span:last-child');
+            circle.innerHTML = '✓';
+            circle.className = 'w-6 h-6 rounded-full bg-cyan-500 flex items-center justify-center text-white text-sm font-bold';
+
+            selectedAnswer = answer;
+            document.getElementById('submitVoteBtn').disabled = false;
+        }
+
+        function checkWordCloudAnswer() {
+            const input = document.getElementById('wordCloudAnswer');
+            const answer = input.value.trim();
+            const words = answer.split(/\s+/).filter(w => w.length > 0);
+            const wordCount = words.length;
+            
+            document.getElementById('wordCount').textContent = wordCount;
+            
+            if (wordCount > 2) {
+                document.getElementById('wordCloudError').classList.remove('hidden');
+                document.getElementById('wordCloudInfo').classList.add('text-red-400');
+                document.getElementById('submitVoteBtn').disabled = true;
+                selectedAnswer = null;
+            } else if (wordCount > 0 && wordCount <= 2) {
+                document.getElementById('wordCloudError').classList.add('hidden');
+                document.getElementById('wordCloudInfo').classList.remove('text-red-400');
+                document.getElementById('submitVoteBtn').disabled = false;
+                selectedAnswer = answer;
+            } else {
+                document.getElementById('wordCloudError').classList.add('hidden');
+                document.getElementById('wordCloudInfo').classList.remove('text-red-400');
+                document.getElementById('submitVoteBtn').disabled = true;
+                selectedAnswer = null;
+            }
+        }
+
+        async function submitVote() {
+            if (!selectedAnswer || hasVoted) return;
+            
+            if (currentPollType === 'word_cloud') {
+                const words = selectedAnswer.trim().split(/\s+/).filter(w => w.length > 0);
+                if (words.length > 2) {
+                    showError('Maksimal 2 kata saja!');
+                    return;
+                }
+            }
+            
+            try {
+                const response = await fetch('/api/vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        poll_id: currentPollId,
+                        participant_id: participantId,
+                        answer: selectedAnswer
+                    })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    hasVoted = true;
+                    totalVotesCount++;
+                    
+                    if (currentSlideIndex >= totalSlides - 1) {
+                        showCompletionScreen();
+                    } else {
+                        showWaitingNext();
+                    }
+                } else {
+                    showError('Error: ' + (result.error || 'Failed to submit vote'));
+                }
+            } catch (error) {
+                console.error('Vote error:', error);
+                showError('Gagal mengirim vote');
+            }
+        }
+
+        function showWaitingNext() {
+            document.getElementById('votingScreen').classList.add('hidden');
+            document.getElementById('waitingNextScreen').classList.remove('hidden');
+            document.getElementById('waitingSlideNum').textContent = currentSlideIndex + 1;
+            document.getElementById('waitingTotalSlides').textContent = totalSlides;
+        }
+
+        function showCompletionScreen() {
+            document.getElementById('votingScreen').classList.add('hidden');
+            document.getElementById('waitingNextScreen').classList.add('hidden');
+            document.getElementById('completionScreen').classList.remove('hidden');
+            
+            document.getElementById('completedSlides').textContent = totalSlides;
+            document.getElementById('totalResponses').textContent = totalVotesCount;
+        }
+
+        function showEndedScreen() {
+            document.getElementById('votingScreen').classList.add('hidden');
+            document.getElementById('waitingNextScreen').classList.add('hidden');
+            document.getElementById('waitingScreen').classList.add('hidden');
+            document.getElementById('completionScreen').classList.add('hidden');
+            document.getElementById('endedScreen').classList.remove('hidden');
+        }
+
+        function leaveSession() {
+            if (confirm('Yakin ingin keluar dari session ini?')) {
+                if (socket) {
+                    socket.emit('leave_session', {
+                        session_code: sessionCode,
+                        participant_id: participantId
+                    });
+                    socket.disconnect();
+                }
+                location.reload();
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+        }
+    </script>
+</body>
+</html>
